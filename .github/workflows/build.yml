@@ -35,8 +35,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y nasm pkg-config patch xz-utils
 
-      # Nova's scripts build with the newest NDK in $ANDROID_HOME/ndk, so the
+      # Nova's scripts build with the newest NDK in the SDK's ndk/ folder, so the
       # native build gets an SDK folder holding the pinned NDK and nothing else.
+      # They read ANDROID_SDK_ROOT before ANDROID_HOME, and the runner sets both
+      # to its own SDK (NDK 30), so all three are pointed at the folder.
       - name: NDK
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" "platforms;android-36" > /dev/null
@@ -47,7 +49,10 @@ jobs:
         run: bash scripts/fetch.sh
 
       - name: Build native libraries
-        run: ANDROID_HOME="$RUNNER_TEMP/ndk-sdk" bash scripts/build-native.sh
+        run: |
+          export ANDROID_HOME="$RUNNER_TEMP/ndk-sdk" ANDROID_SDK_ROOT="$RUNNER_TEMP/ndk-sdk" ANDROID_SDK="$RUNNER_TEMP/ndk-sdk"
+          unset ANDROID_NDK ANDROID_NDK_HOME ANDROID_NDK_ROOT ANDROID_NDK_LATEST_HOME
+          bash scripts/build-native.sh
 
       - uses: gradle/actions/setup-gradle@v4
         with:

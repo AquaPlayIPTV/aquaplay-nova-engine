@@ -23,6 +23,24 @@ has_abi() { [[ " $ABIS " == *" $1 "* ]]; }
 
 cd "$WORK"
 
+# aos-avos at the pinned commit defines the default stream buffer and
+# I-frame size functions inside its DEBUG_MSG block (Source/stream.c), while
+# libavos.c, stream_video.c, stream_parser.c and avos_mp_video.c call them in
+# every build, so a release build cannot link libavos.so. Close the block
+# before them and open it again after: the debug commands stay debug-only.
+(
+  f=native/avos/Source/stream.c
+  if ! grep -q 'AquaPlay: out of DEBUG_MSG' "$f"; then
+    awk '
+      /^void define_default_stream_buffer_size\(int size\)/ && !a { print "#endif /* DEBUG_MSG (AquaPlay: out of DEBUG_MSG) */"; a=1 }
+      /^DECLARE_DEBUG_COMMAND\("sbs"/ && a && !b { print "#ifdef DEBUG_MSG"; b=1 }
+      { print }
+      END { if (!a || !b) exit 1 }
+    ' "$f" > "$f.new" || { echo "stream.c: the DEBUG_MSG block is not where it was" >&2; exit 1; }
+    mv "$f.new" "$f"
+  fi
+)
+
 echo "== FFmpeg"
 (
   cd native/ffmpeg-android-builder
