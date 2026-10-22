@@ -1,0 +1,6 @@
+work/
+dist/
+engine/build/
+engine/jniLibs/
+engine/.gradle/
+.gradle/

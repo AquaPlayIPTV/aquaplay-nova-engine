@@ -1,0 +1,83 @@
+name: Build engine
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # a tag makes a release
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      NDK_VERSION: "28.2.13676358"
+      ABIS: "armeabi-v7a arm64-v8a x86_64"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="${GITHUB_REF_NAME#v}"; else v="0.0.0-${GITHUB_SHA::7}"; fi
+          echo "ENGINE_VERSION=$v" >> "$GITHUB_ENV"
+
+      - name: Build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm pkg-config patch xz-utils
+
+      # Nova's scripts build with the newest NDK in $ANDROID_HOME/ndk, so the
+      # native build gets an SDK folder holding the pinned NDK and nothing else.
+      - name: NDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" "platforms;android-36" > /dev/null
+          mkdir -p "$RUNNER_TEMP/ndk-sdk/ndk"
+          ln -s "$ANDROID_HOME/ndk/$NDK_VERSION" "$RUNNER_TEMP/ndk-sdk/ndk/$NDK_VERSION"
+
+      - name: Fetch sources
+        run: bash scripts/fetch.sh
+
+      - name: Build native libraries
+        run: ANDROID_HOME="$RUNNER_TEMP/ndk-sdk" bash scripts/build-native.sh
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Package the .aar
+        working-directory: engine
+        run: gradle --no-daemon assembleRelease
+
+      - name: Package the sources
+        run: bash scripts/package-sources.sh "aquaplay-nova-engine-$ENGINE_VERSION"
+
+      - name: Sizes
+        run: |
+          ls -l engine/build/outputs/aar dist
+          for abi in $ABIS; do echo "$abi: $(du -sb engine/jniLibs/$abi | cut -f1) bytes uncompressed"; done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nova-engine-${{ env.ENGINE_VERSION }}
+          path: |
+            engine/build/outputs/aar/*.aar
+            dist/*.tar.xz
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            engine/build/outputs/aar/*.aar dist/*.tar.xz \
+            --title "Engine $ENGINE_VERSION" \
+            --notes "Nova's playback engine for AquaPlay. Sources at the commits in sources.lock; the complete source, FFmpeg included as patched and built, is the -sources.tar.xz file. Licences: NOTICE.md."

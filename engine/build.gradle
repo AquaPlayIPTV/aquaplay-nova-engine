@@ -1,0 +1,78 @@
+/*
+ * Packages Nova's playback engine as one Android library (.aar):
+ * the Java classes the native engine calls into, taken unchanged from Nova's
+ * MediaLib, plus the native libraries scripts/build-native.sh gathered.
+ *
+ * The classes keep Nova's package, com.archos.medialib, because the native
+ * code finds them by that name.
+ */
+plugins {
+    id 'com.android.library' version '8.9.2'
+}
+
+def work = file(System.getenv('WORK') ?: "${rootDir}/../work")
+def engineVersion = System.getenv('ENGINE_VERSION') ?: '0.0.0-dev'
+
+// The only files of MediaLib the engine needs; everything else in it is
+// Nova's media library, network shares, scrapers and so on.
+def novaClasses = [
+    'AvosMediaPlayer', 'IMediaPlayer', 'LibAvos', 'CpuTest', 'Subtitle',
+    'MediaMetadata', 'AvosMediaMetadata', 'AvosBitmapHelper',
+    'StreamBufferSettings', 'ContentFileDescriptor',
+]
+
+android {
+    namespace = 'com.archos.medialib'
+    compileSdk = 36
+
+    defaultConfig {
+        minSdk = 24
+        consumerProguardFiles 'consumer-rules.pro'
+        aarMetadata { minCompileSdk = 34 }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs = ['src/main/java', layout.buildDirectory.dir('nova-src').get().asFile]
+            jniLibs.srcDirs = ['jniLibs']
+        }
+    }
+
+    buildTypes {
+        release { minifyEnabled = false }
+    }
+
+    packaging {
+        // Libraries are stored uncompressed and 16 KB aligned in the app.
+        jniLibs.useLegacyPackaging = false
+    }
+}
+
+// Nova's files, copied unchanged. SmbProxy is not among them: ours (in
+// src/main/java) stands in for it, because Nova's pulls in its whole file
+// library for network shares, which AquaPlay never plays from.
+def copyNovaSources = tasks.register('copyNovaSources', Sync) {
+    from("${work}/MediaLib/src") {
+        include novaClasses.collect { "com/archos/medialib/${it}.java" }
+    }
+    into layout.buildDirectory.dir('nova-src')
+    doLast {
+        novaClasses.each { name ->
+            if (!file("${destinationDir}/com/archos/medialib/${name}.java").exists())
+                throw new GradleException("${name}.java is missing from ${work}/MediaLib: run scripts/fetch.sh")
+        }
+    }
+}
+tasks.named('preBuild') { dependsOn copyNovaSources }
+
+dependencies {
+    compileOnly 'androidx.annotation:annotation:1.8.2'
+    implementation 'org.slf4j:slf4j-api:2.0.17'
+}
+
+base { archivesName = "nova-engine-${engineVersion}" }

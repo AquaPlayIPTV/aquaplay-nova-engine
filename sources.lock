@@ -1,0 +1,19 @@
+# Every source the engine is built from, each at one exact commit.
+# path                              repository                                                         commit
+AVP                                 https://github.com/nova-video-player/aos-AVP                       eacf19d5ff8de2e250f77a639dfe9c12429ed076
+MediaLib                            https://github.com/nova-video-player/aos-MediaLib                  b1bcc08177ac5497170f5f85581e3d9fa9964815
+native/avos                         https://github.com/nova-video-player/aos-avos                      4733449875712c26d385f3ffded0a11ab029f1dc
+native/audiocompress                https://github.com/nova-video-player/aos-audiocompress             3a3f9324d2550bd305060e1c52b803121ea09aad
+native/libnativehelper              https://github.com/nova-video-player/aos-libnativehelper           ab46fb536b594b25f93611ad7ef0f27b8fc24edb
+native/ffmpeg-android-builder       https://github.com/nova-video-player/ffmpeg-android-builder-nobin  fd7c9f9c3f63befedafc8a36b2da722f81b64aad
+native/prebuilt/dav1d               https://github.com/nova-video-player/prebuilt-dav1d                f89559d62f671881431146b94c4364e568a623c8
+native/prebuilt/opus                https://github.com/nova-video-player/prebuilt-opus                 2a04bae78e56281bf57d4116b1e2545b5de2abdb
+native/prebuilt/openssl             https://github.com/nova-video-player/prebuilt-openssl              78631105380190806182d77943b5524e81609f65
+native/prebuilt/libmysofa           https://github.com/nova-video-player/prebuilt-libmysofa            adf0d8278382a631d67dc3764d62d6ceece3789b
+# Headers FFmpeg is compiled against: the dav1d and Opus sources of the ready-built libraries
+# above (dav1d 1.5.4; Opus at the commit Nova's opus builder checks out).
+native/dav1d-android-builder/dav1d  https://github.com/videolan/dav1d                                 54706fc6bc0cdecab7e9593974a4039cc038fca7
+native/opus-android-builder/opus    https://github.com/xiph/opus                                      03647f524a40b05a1898522e92033810b58103c7
+# FFmpeg itself: the n9.0.1 release, which Nova's build script asks for. Nova's four patches
+# (in native/ffmpeg-android-builder) are applied on top by that script.
+native/ffmpeg-android-builder/ffmpeg.git  https://github.com/FFmpeg/FFmpeg                           bf1b838f2ab88b4f8fd83443325c782ea0e0f7fa
