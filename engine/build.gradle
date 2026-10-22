@@ -14,9 +14,13 @@ def work = file(System.getenv('WORK') ?: "${rootDir}/../work")
 def engineVersion = System.getenv('ENGINE_VERSION') ?: '0.0.0-dev'
 
 // The only files of MediaLib the engine needs; everything else in it is
-// Nova's media library, network shares, scrapers and so on.
+// Nova's media library, network shares, scrapers and so on. The native code
+// looks up AvosMediaPlayer, LibAvos, Subtitle, AvosBitmapHelper and
+// AvosMediaMetadataRetriever by name when it loads, and CodecDiscovery (ours,
+// src/main/java, cut from Nova's) for the codecs the phone has.
 def novaClasses = [
     'AvosMediaPlayer', 'IMediaPlayer', 'LibAvos', 'CpuTest', 'Subtitle',
+    'AvosMediaMetadataRetriever', 'IMediaMetadataRetriever',
     'MediaMetadata', 'AvosMediaMetadata', 'AvosBitmapHelper',
     'StreamBufferSettings', 'ContentFileDescriptor',
 ]
